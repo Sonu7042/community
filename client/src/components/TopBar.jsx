@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import {
   BellIcon,
   BriefcaseIcon,
@@ -52,11 +53,17 @@ function TopBar() {
           <button className="rounded-full border border-stroke bg-panel p-2 text-textSoft transition hover:text-white">
             <BellIcon />
           </button>
-          <img
+          {/* <img
             src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80"
             alt="Profile"
             className="h-9 w-9 rounded-full border border-stroke object-cover"
-          />
+          /> */}
+          <Link
+            to="/auth?mode=login"
+            className="rounded-full border border-stroke bg-[#111111] px-4 py-2 text-sm font-semibold text-white transition hover:border-sky-500 hover:text-sky-300"
+          >
+            Login
+          </Link>
         </div>
       </div>
       <div className="border-t border-stroke/60 px-3 py-3 md:hidden">
