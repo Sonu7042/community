@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getRandomAvatar } from '../data/avatarOptions';
+import { API_BASE_URL } from '../../domain';
+
 import {
   BellIcon,
   BriefcaseIcon,
@@ -13,7 +15,8 @@ import {
 
 const topIcons = [HomeIcon, FireIcon, GridIcon, BriefcaseIcon, ShieldIcon];
 const AUTH_STORAGE_KEY = 'mycommunityUser';
-const POSTS_API_URL = 'http://localhost:3000/api/posts';
+
+const POSTS_API_URL = `${API_BASE_URL}/posts`;
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
 function TopBar() {

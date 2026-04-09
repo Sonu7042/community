@@ -3,8 +3,9 @@ import LeftSidebar from '../components/LeftSidebar';
 import PostCard from '../components/PostCard';
 import RightSidebar from '../components/RightSidebar';
 import { ads, navItems, resourceItems } from '../data/mockData';
+import { API_BASE_URL } from '../../domain';
 
-const POSTS_API_URL = 'http://localhost:3000/api/posts';
+const POSTS_API_URL = `${API_BASE_URL}/posts`;
 
 const formatTimeAgo = (dateString) => {
   const createdAt = new Date(dateString);

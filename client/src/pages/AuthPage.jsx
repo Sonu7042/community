@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { getRandomAvatar } from '../data/avatarOptions';
+import { API_BASE_URL_Auth } from '../../domain';
 
-const API_BASE_URL = 'http://localhost:3000/api/auth';
 const AUTH_STORAGE_KEY = 'mycommunityUser';
 
 const authModes = {
@@ -83,7 +83,7 @@ function AuthPage() {
   };
 
   const postRequest = async (endpoint, payload) => {
-    const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
+    const response = await fetch(`${API_BASE_URL_Auth}/${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
