@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { getRandomAvatar } from '../data/avatarOptions';
 
 const API_BASE_URL = 'http://localhost:3000/api/auth';
+const AUTH_STORAGE_KEY = 'mycommunityUser';
 
 const authModes = {
   login: {
@@ -49,6 +51,14 @@ function AuthPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem(AUTH_STORAGE_KEY);
+
+    if (savedUser) {
+      navigate('/');
+    }
+  }, [navigate]);
 
   const clearFeedback = () => {
     setMessage('');
@@ -116,6 +126,13 @@ function AuthPage() {
         setShowVerificationStep(true);
         setMessage(data.message || 'Verification code sent to your email.');
       } else {
+        localStorage.setItem(
+          AUTH_STORAGE_KEY,
+          JSON.stringify({
+            ...data.user,
+            avatar: data.user.avatar || getRandomAvatar(),
+          })
+        );
         setMessage(data.message || 'Login successful');
         setTimeout(() => {
           navigate('/');

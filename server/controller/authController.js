@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const User = require('../model/user');
 
@@ -11,6 +12,26 @@ const formatValidationErrors = (error) =>
   Object.values(error.errors).map((item) => item.message);
 
 const VERIFICATION_CODE_MINUTES = 10;
+
+const createAuthToken = (user) => {
+  const secret = process.env.JWT_SECRET;
+
+  if (!secret) {
+    throw new Error('JWT_SECRET is missing in environment variables');
+  }
+
+  return jwt.sign(
+    {
+      userId: user._id,
+      email: user.email,
+      username: user.username,
+    },
+    secret,
+    {
+      expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    }
+  );
+};
 
 const generateVerificationCode = () =>
   crypto.randomInt(100000, 1000000).toString();
@@ -259,9 +280,12 @@ const loginUser = async (req, res) => {
       });
     }
 
+    const token = createAuthToken(user);
+
     return res.status(200).json({
       success: true,
       message: 'Login successful',
+      token,
       user: {
         id: user._id,
         username: user.username,
