@@ -6,7 +6,6 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const postRoutes = require('./routes/postRoutes');
 const app = express();
-connectDB();
 const port = process.env.PORT || 3000;
 
 app.use(
@@ -19,10 +18,16 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
-});
-
 app.get('/', (req, res) => {
   res.send('Hello, World!');
 });
+
+const startServer = async () => {
+  await connectDB();
+
+  app.listen(port, () => {
+    console.log(`Server is running on http://localhost:${port}`);
+  });
+};
+
+startServer();
