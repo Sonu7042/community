@@ -45,6 +45,8 @@ app.get('/', (req, res) => {
 });
 
 app.use((error, req, res, next) => {
+  console.error('Server error:', error);
+
   if (error?.type === 'entity.too.large') {
     return res.status(413).json({
       success: false,
@@ -62,14 +64,24 @@ app.use((error, req, res, next) => {
   return res.status(500).json({
     success: false,
     message: 'Internal server error',
+    error:
+      process.env.NODE_ENV === 'production'
+        ? undefined
+        : error?.message || 'Unknown server error',
   });
 });
 
 if (require.main === module) {
   const port = process.env.PORT || 3000;
 
-  app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
+  app.listen(port, async () => {
+    try {
+      await connectDB();
+      console.log(`Server is running on http://localhost:${port}`);
+    } catch (error) {
+      console.error('Startup error:', error.message);
+      process.exit(1);
+    }
   });
 }
 
