@@ -25,7 +25,7 @@ const getExcerptPreview = (excerpt = '', wordLimit = 10) => {
   };
 };
 
-function PostCard({ post, featured = false, onToggleLike, onShare }) {
+function PostCard({ post, featured = false, onToggleLike, onShare, onRequireAuth }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const excerptPreview = getExcerptPreview(post.excerpt, 10);
   const secondaryStats = [
@@ -142,7 +142,11 @@ function PostCard({ post, featured = false, onToggleLike, onShare }) {
             <button
               key={`${stat.type}-${stat.label}`}
               type="button"
-              onClick={stat.type === 'share' ? () => onShare?.(post) : undefined}
+              onClick={
+                stat.type === 'share'
+                  ? () => onShare?.(post)
+                  : () => onRequireAuth?.()
+              }
               disabled={stat.type === 'share' ? post.isSharing : false}
               className={`${className} disabled:cursor-not-allowed disabled:opacity-70`}
             >

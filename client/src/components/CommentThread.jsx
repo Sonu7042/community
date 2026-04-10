@@ -5,10 +5,26 @@ function CommentThread({
   postId,
   onReply,
   activeReplyCommentId,
+  onRequireAuth,
   depth = 0,
 }) {
   const [replyDrafts, setReplyDrafts] = useState({});
   const [openReplyBoxes, setOpenReplyBoxes] = useState({});
+
+  const handleToggleReplyBox = (commentId) => {
+    const savedUser = localStorage.getItem('mycommunityUser');
+    const loggedInUser = savedUser ? JSON.parse(savedUser) : null;
+
+    if (!loggedInUser?.id) {
+      onRequireAuth?.();
+      return;
+    }
+
+    setOpenReplyBoxes((currentBoxes) => ({
+      ...currentBoxes,
+      [commentId]: !currentBoxes[commentId],
+    }));
+  };
 
   const handleSubmitReply = async (commentId) => {
     const trimmedMessage = (replyDrafts[commentId] || '').trim();
@@ -58,12 +74,7 @@ function CommentThread({
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setOpenReplyBoxes((currentBoxes) => ({
-                      ...currentBoxes,
-                      [comment.id]: !currentBoxes[comment.id],
-                    }))
-                  }
+                  onClick={() => handleToggleReplyBox(comment.id)}
                   className="mt-3 text-sm font-medium text-sky-300 transition hover:text-sky-200"
                 >
                   {replyBoxOpen ? 'Cancel reply' : 'Reply'}
@@ -101,6 +112,7 @@ function CommentThread({
                       postId={postId}
                       onReply={onReply}
                       activeReplyCommentId={activeReplyCommentId}
+                      onRequireAuth={onRequireAuth}
                       depth={depth + 1}
                     />
                   </div>

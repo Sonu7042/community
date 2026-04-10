@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getRandomAvatar } from '../data/avatarOptions';
 import { API_BASE_URL } from '../../domain';
 
@@ -21,6 +21,8 @@ const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_PDF_SIZE_BYTES = 10 * 1024 * 1024;
 
 function TopBar() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [loggedInUser, setLoggedInUser] = useState(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showPostModal, setShowPostModal] = useState(false);
@@ -86,8 +88,14 @@ function TopBar() {
     setShowProfileMenu(false);
   };
 
+  const redirectToLogin = () => {
+    const redirect = `${location.pathname}${location.search}`;
+    navigate(`/auth?mode=login&redirect=${encodeURIComponent(redirect)}`);
+  };
+
   const handleOpenPostModal = () => {
     if (!loggedInUser) {
+      redirectToLogin();
       return;
     }
 
@@ -259,8 +267,7 @@ function TopBar() {
             <button
               type="button"
               onClick={handleOpenPostModal}
-              className="hidden rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60 sm:inline-flex"
-              disabled={!loggedInUser}
+              className="hidden rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-400 sm:inline-flex"
             >
               Post
             </button>

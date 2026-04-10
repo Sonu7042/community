@@ -42,6 +42,7 @@ function AuthPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentMode = searchParams.get('mode') === 'signup' ? 'signup' : 'login';
+  const redirectPath = searchParams.get('redirect') || '/';
   const modeContent = authModes[currentMode];
 
   const [formData, setFormData] = useState(initialFormState);
@@ -56,9 +57,9 @@ function AuthPage() {
     const savedUser = localStorage.getItem(AUTH_STORAGE_KEY);
 
     if (savedUser) {
-      navigate('/');
+      navigate(redirectPath);
     }
-  }, [navigate]);
+  }, [navigate, redirectPath]);
 
   const clearFeedback = () => {
     setMessage('');
@@ -66,7 +67,13 @@ function AuthPage() {
   };
 
   const switchMode = (mode) => {
-    setSearchParams({ mode });
+    const nextParams = { mode };
+
+    if (redirectPath && redirectPath !== '/') {
+      nextParams.redirect = redirectPath;
+    }
+
+    setSearchParams(nextParams);
     setFormData(initialFormState);
     setVerificationCode('');
     setVerificationEmail('');
@@ -135,7 +142,7 @@ function AuthPage() {
         );
         setMessage(data.message || 'Login successful');
         setTimeout(() => {
-          navigate('/');
+          navigate(redirectPath);
         }, 800);
       }
     } catch (submitError) {
@@ -162,7 +169,13 @@ function AuthPage() {
         email: verificationEmail,
         password: '',
       });
-      setSearchParams({ mode: 'login' });
+      const nextParams = { mode: 'login' };
+
+      if (redirectPath && redirectPath !== '/') {
+        nextParams.redirect = redirectPath;
+      }
+
+      setSearchParams(nextParams);
       setMessage('Email verified successfully. You can login now.');
     } catch (submitError) {
       setError(submitError.message);

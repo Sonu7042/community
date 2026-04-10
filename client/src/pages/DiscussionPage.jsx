@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import CommentThread from '../components/CommentThread';
 import PdfPreview from '../components/PdfPreview';
 import { API_BASE_URL } from '../../domain';
@@ -51,6 +51,8 @@ const mapPostToDiscussion = (post) => ({
 });
 
 function DiscussionPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { postId } = useParams();
   const [post, setPost] = useState(null);
   const [commentMessage, setCommentMessage] = useState('');
@@ -58,6 +60,11 @@ function DiscussionPage() {
   const [isCommenting, setIsCommenting] = useState(false);
   const [replyingToCommentId, setReplyingToCommentId] = useState('');
   const [error, setError] = useState('');
+
+  const redirectToLogin = () => {
+    const redirect = `${location.pathname}${location.search}`;
+    navigate(`/auth?mode=login&redirect=${encodeURIComponent(redirect)}`);
+  };
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -98,7 +105,7 @@ function DiscussionPage() {
     const loggedInUser = savedUser ? JSON.parse(savedUser) : null;
 
     if (!loggedInUser?.id) {
-      setError('Please login first to comment on a post.');
+      redirectToLogin();
       return { success: false };
     }
 
@@ -147,7 +154,7 @@ function DiscussionPage() {
     const loggedInUser = savedUser ? JSON.parse(savedUser) : null;
 
     if (!loggedInUser?.id) {
-      setError('Please login first to reply to a comment.');
+      redirectToLogin();
       return { success: false };
     }
 
@@ -277,6 +284,7 @@ function DiscussionPage() {
                     postId={post.id}
                     onReply={handleAddReply}
                     activeReplyCommentId={replyingToCommentId}
+                    onRequireAuth={redirectToLogin}
                   />
                 )}
               </div>

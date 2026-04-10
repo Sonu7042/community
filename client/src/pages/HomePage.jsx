@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import PostCard from '../components/PostCard';
 import { API_BASE_URL } from '../../domain';
 
@@ -65,11 +66,18 @@ const mapApiPostToCardPost = (post) => ({
 });
 
 function HomePage() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [likeError, setLikeError] = useState('');
   const [shareError, setShareError] = useState('');
+
+  const redirectToLogin = () => {
+    const redirect = `${location.pathname}${location.search}`;
+    navigate(`/auth?mode=login&redirect=${encodeURIComponent(redirect)}`);
+  };
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -106,7 +114,7 @@ function HomePage() {
     const loggedInUser = savedUser ? JSON.parse(savedUser) : null;
 
     if (!loggedInUser?.id) {
-      setLikeError('Please login first to like a post.');
+      redirectToLogin();
       return;
     }
 
@@ -173,6 +181,14 @@ function HomePage() {
   };
 
   const handleShare = async (post) => {
+    const savedUser = localStorage.getItem(AUTH_STORAGE_KEY);
+    const loggedInUser = savedUser ? JSON.parse(savedUser) : null;
+
+    if (!loggedInUser?.id) {
+      redirectToLogin();
+      return;
+    }
+
     const shareUrl = `${window.location.origin}/posts/${post.id}/discussion`;
     const shareData = {
       title: post.title,
@@ -272,6 +288,7 @@ function HomePage() {
             featured={index === 1}
             onToggleLike={handleToggleLike}
             onShare={handleShare}
+            onRequireAuth={redirectToLogin}
           />
         ))}
     </section>
