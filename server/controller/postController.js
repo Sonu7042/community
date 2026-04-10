@@ -11,6 +11,7 @@ cloudinary.config({
 const formatValidationErrors = (error) =>
   Object.values(error.errors).map((item) => item.message);
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_PDF_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_COMMENT_LENGTH = 500;
 
 const getRequestedUserId = (value) => {
@@ -76,6 +77,22 @@ const findCommentById = (comments, targetCommentId) => {
   return null;
 };
 
+const isCloudinaryUrl = (url = '') => url.includes('/res.cloudinary.com/');
+
+const getDownloadFileName = (pdfName = 'document.pdf') => {
+  const trimmedName = pdfName.trim() || 'document.pdf';
+  return trimmedName.toLowerCase().endsWith('.pdf') ? trimmedName : `${trimmedName}.pdf`;
+};
+
+const getCloudinaryDownloadUrl = (url, pdfName = 'document.pdf') => {
+  if (!isCloudinaryUrl(url) || !url.includes('/upload/')) {
+    return url;
+  }
+
+  const fileName = encodeURIComponent(getDownloadFileName(pdfName));
+  return url.replace('/upload/', `/upload/fl_attachment:${fileName}/`);
+};
+
 const getBase64ImageSizeInBytes = (image) => {
   if (!image?.startsWith('data:image/')) {
     return 0;
@@ -85,26 +102,23 @@ const getBase64ImageSizeInBytes = (image) => {
   return Buffer.from(base64Content, 'base64').length;
 };
 
-const uploadPostImageToCloudinary = async (image) => {
-  if (!image) {
-    return '';
-  }
-
+const uploadPostAssetToCloudinary = async ({ asset, resourceType, folder, format }) => {
   if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
     throw new Error(
       'Cloudinary configuration missing. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET'
     );
   }
 
-  const uploadResponse = await cloudinary.uploader.upload(image, {
-    folder: 'mycommunity/posts',
-    resource_type: 'image',
+  const uploadResponse = await cloudinary.uploader.upload(asset, {
+    folder,
+    resource_type: resourceType,
+    format,
   });
 
   return uploadResponse.secure_url;
 };
 
-const validateCreatePostBody = ({ userId, username, avatar, title, description, image }) => {
+const validateCreatePostBody = ({ userId, username, avatar, title, description, image, pdf, pdfName }) => {
   const errors = [];
 
   if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
@@ -138,6 +152,13 @@ const validateCreatePostBody = ({ userId, username, avatar, title, description, 
     errors.push('Image must be a valid image URL or base64 image string');
   }
 
+  if (
+    pdf &&
+    !/^(https?:\/\/.+)|(data:application\/pdf;base64,[A-Za-z0-9+/=]+)$/.test(pdf.trim())
+  ) {
+    errors.push('PDF must be a valid PDF URL or base64 PDF string');
+  }
+
   if (image && image.startsWith('data:image/')) {
     const imageSize = getBase64ImageSizeInBytes(image.trim());
 
@@ -146,12 +167,24 @@ const validateCreatePostBody = ({ userId, username, avatar, title, description, 
     }
   }
 
+  if (pdf && pdf.startsWith('data:application/pdf')) {
+    const pdfSize = getBase64ImageSizeInBytes(pdf.trim());
+
+    if (pdfSize > MAX_PDF_SIZE_BYTES) {
+      errors.push('only upload 10mb pdf');
+    }
+  }
+
+  if (pdf && !pdfName?.trim()) {
+    errors.push('PDF name is required');
+  }
+
   return errors;
 };
 
 const createPost = async (req, res) => {
   try {
-    const { userId, username, avatar, title, description, image } = req.body;
+    const { userId, username, avatar, title, description, image, pdf, pdfName } = req.body;
 
     const validationErrors = validateCreatePostBody({
       userId,
@@ -160,6 +193,8 @@ const createPost = async (req, res) => {
       title,
       description,
       image,
+      pdf,
+      pdfName,
     });
 
     if (validationErrors.length > 0) {
@@ -170,7 +205,24 @@ const createPost = async (req, res) => {
       });
     }
 
-    const uploadedImageUrl = await uploadPostImageToCloudinary(image?.trim());
+    let uploadedImageUrl = image?.trim() || '';
+    let uploadedPdfUrl = pdf?.trim() || '';
+
+    if (image?.trim()?.startsWith('data:image/')) {
+      uploadedImageUrl = await uploadPostAssetToCloudinary({
+        asset: image.trim(),
+        resourceType: 'image',
+        folder: 'mycommunity/posts/images',
+      });
+    }
+
+    if (pdf?.trim()?.startsWith('data:application/pdf')) {
+      uploadedPdfUrl = await uploadPostAssetToCloudinary({
+        asset: pdf.trim(),
+        resourceType: 'auto',
+        folder: 'mycommunity/posts/pdfs',
+      });
+    }
 
     const post = await Post.create({
       author: {
@@ -181,6 +233,8 @@ const createPost = async (req, res) => {
       title: title.trim(),
       description: description.trim(),
       image: uploadedImageUrl,
+      pdf: uploadedPdfUrl,
+      pdfName: pdfName?.trim() || '',
     });
 
     return res.status(201).json({
@@ -519,6 +573,44 @@ const incrementShareCount = async (req, res) => {
   }
 };
 
+const downloadPostPdf = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid post id',
+      });
+    }
+
+    const post = await Post.findById(id);
+
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found',
+      });
+    }
+
+    if (!post.pdf) {
+      return res.status(404).json({
+        success: false,
+        message: 'PDF not found for this post',
+      });
+    }
+
+    const downloadUrl = getCloudinaryDownloadUrl(post.pdf, post.pdfName);
+    return res.redirect(downloadUrl);
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while downloading PDF',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createPost,
   getAllPosts,
@@ -528,4 +620,5 @@ module.exports = {
   addCommentToPost,
   addReplyToComment,
   incrementShareCount,
+  downloadPostPdf,
 };

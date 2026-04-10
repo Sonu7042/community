@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import CommentThread from '../components/CommentThread';
+import PdfPreview from '../components/PdfPreview';
 import { API_BASE_URL } from '../../domain';
 
 const AUTH_STORAGE_KEY = 'mycommunityUser';
@@ -42,6 +43,8 @@ const mapPostToDiscussion = (post) => ({
   title: post.title,
   excerpt: post.description,
   image: post.image,
+  pdf: post.pdf || '',
+  pdfName: post.pdfName || '',
   time: formatTimeAgo(post.createdAt),
   commentsCount: Number(post.commentsCount || 0),
   comments: mapCommentTree(post.comments || []),
@@ -225,6 +228,16 @@ function DiscussionPage() {
 
               {post.image ? (
                 <img src={post.image} alt={post.title} className="max-h-[520px] w-full object-cover" />
+              ) : null}
+
+              {!post.image && post.pdf ? (
+                <div className="border-t border-stroke/70 px-5 py-5">
+                  <PdfPreview
+                    pdfUrl={post.pdf}
+                    pdfName={post.pdfName}
+                    downloadUrl={`${POSTS_API_URL}/${post.id}/download`}
+                  />
+                </div>
               ) : null}
             </article>
 

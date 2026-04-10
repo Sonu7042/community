@@ -81,6 +81,20 @@ const postSchema = new mongoose.Schema(
         message: 'Image must be a valid image URL',
       },
     },
+    pdf: {
+      type: String,
+      trim: true,
+      default: '',
+      validate: {
+        validator: (value) => !value || /^https?:\/\/.+/.test(value),
+        message: 'PDF must be a valid file URL',
+      },
+    },
+    pdfName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     likesCount: {
       type: Number,
       default: 0,

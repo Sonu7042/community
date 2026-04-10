@@ -18,6 +18,7 @@ const AUTH_STORAGE_KEY = 'mycommunityUser';
 
 const POSTS_API_URL = `${API_BASE_URL}/posts`;
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_PDF_SIZE_BYTES = 10 * 1024 * 1024;
 
 function TopBar() {
   const [loggedInUser, setLoggedInUser] = useState(null);
@@ -26,6 +27,7 @@ function TopBar() {
   const [postTitle, setPostTitle] = useState('');
   const [postDescription, setPostDescription] = useState('');
   const [postImage, setPostImage] = useState(null);
+  const [postPdf, setPostPdf] = useState(null);
   const [isPosting, setIsPosting] = useState(false);
   const [postError, setPostError] = useState('');
   const [postSuccess, setPostSuccess] = useState('');
@@ -100,6 +102,7 @@ function TopBar() {
     setPostTitle('');
     setPostDescription('');
     setPostImage(null);
+    setPostPdf(null);
     setPostError('');
     setPostSuccess('');
   };
@@ -121,6 +124,32 @@ function TopBar() {
 
     setPostError('');
     setPostImage(file);
+  };
+
+  const handlePostPdfChange = (event) => {
+    const file = event.target.files?.[0] || null;
+
+    if (!file) {
+      setPostPdf(null);
+      return;
+    }
+
+    if (file.type !== 'application/pdf') {
+      setPostPdf(null);
+      setPostError('Please upload a PDF file only');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > MAX_PDF_SIZE_BYTES) {
+      setPostPdf(null);
+      setPostError('only upload 10mb pdf');
+      event.target.value = '';
+      return;
+    }
+
+    setPostError('');
+    setPostPdf(file);
   };
 
   const fileToBase64 = (file) =>
@@ -151,6 +180,7 @@ function TopBar() {
 
     try {
       const imageString = postImage ? await fileToBase64(postImage) : '';
+      const pdfString = postPdf ? await fileToBase64(postPdf) : '';
 
       const response = await fetch(POSTS_API_URL, {
         method: 'POST',
@@ -164,6 +194,8 @@ function TopBar() {
           title: postTitle,
           description: postDescription,
           image: imageString,
+          pdf: pdfString,
+          pdfName: postPdf?.name || '',
         }),
       });
 
@@ -177,6 +209,7 @@ function TopBar() {
       setPostTitle('');
       setPostDescription('');
       setPostImage(null);
+      setPostPdf(null);
       setTimeout(() => {
         handleClosePostModal();
       }, 900);
@@ -378,6 +411,24 @@ function TopBar() {
                   alt="preview"
                   className="mt-3 h-40 w-full rounded-md object-cover"
                 />
+              )}
+            </div>
+
+            <div className="mb-5">
+              <label className="mb-2 block text-sm text-gray-400">Upload PDF</label>
+              <p className="mb-2 text-xs text-textSoft">Only upload 10mb pdf</p>
+
+              <input
+                type="file"
+                accept="application/pdf,.pdf"
+                onChange={handlePostPdfChange}
+                className="text-gray-300"
+              />
+
+              {postPdf && (
+                <div className="mt-3 rounded-md border border-stroke bg-[#2a2a2a] px-4 py-3 text-sm text-white">
+                  {postPdf.name}
+                </div>
               )}
             </div>
 

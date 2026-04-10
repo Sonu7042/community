@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CommentIcon, DotsIcon, DownIcon, PlusIcon, ShareIcon, UpIcon } from './Icons';
+import PdfPreview from './PdfPreview';
+import { API_BASE_URL } from '../../domain';
 
 const statIconMap = {
   comment: CommentIcon,
@@ -87,6 +89,16 @@ function PostCard({ post, featured = false, onToggleLike, onShare }) {
               <PlusIcon className="h-5 w-5" />
             </button>
           ) : null}
+        </div>
+      ) : null}
+
+      {!post.image && post.pdf ? (
+        <div className="px-4 pb-1">
+          <PdfPreview
+            pdfUrl={post.pdf}
+            pdfName={post.pdfName}
+            downloadUrl={`${API_BASE_URL}/posts/${post.id}/download`}
+          />
         </div>
       ) : null}
 

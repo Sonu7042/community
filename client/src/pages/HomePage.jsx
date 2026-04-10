@@ -51,6 +51,8 @@ const mapApiPostToCardPost = (post) => ({
   title: post.title,
   excerpt: post.description,
   image: post.image,
+  pdf: post.pdf || '',
+  pdfName: post.pdfName || '',
   likesCount: Number(post.likesCount || 0),
   likesLabel: formatCompactCount(Number(post.likesCount || 0)),
   commentsCount: Number(post.commentsCount || 0),
