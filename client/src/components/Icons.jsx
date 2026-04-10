@@ -98,6 +98,14 @@ export function UpIcon({ className = 'h-3.5 w-3.5' }) {
   );
 }
 
+export function DownIcon({ className = 'h-3.5 w-3.5' }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+      <path d="m6 10 6 6 6-6" />
+    </svg>
+  );
+}
+
 export function CommentIcon({ className = 'h-4 w-4' }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>

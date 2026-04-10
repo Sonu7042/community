@@ -11,6 +11,70 @@ cloudinary.config({
 const formatValidationErrors = (error) =>
   Object.values(error.errors).map((item) => item.message);
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_COMMENT_LENGTH = 500;
+
+const getRequestedUserId = (value) => {
+  if (!value || !mongoose.Types.ObjectId.isValid(value)) {
+    return null;
+  }
+
+  return value;
+};
+
+const serializePost = (post, requestedUserId = null) => {
+  const postObject = post.toObject ? post.toObject() : post;
+  const likedBy = Array.isArray(postObject.likedBy) ? postObject.likedBy : [];
+  const isLiked = requestedUserId
+    ? likedBy.some((likedUserId) => likedUserId.toString() === requestedUserId)
+    : false;
+
+  return {
+    ...postObject,
+    isLiked,
+  };
+};
+
+const validateDiscussionPayload = ({ userId, username, avatar, message }, messageLabel) => {
+  const errors = [];
+
+  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+    errors.push('Valid user id is required');
+  }
+
+  if (!username || !username.trim()) {
+    errors.push('Username is required');
+  }
+
+  if (!avatar || !avatar.trim()) {
+    errors.push('Avatar is required');
+  }
+
+  if (!message || !message.trim()) {
+    errors.push(`${messageLabel} is required`);
+  } else if (message.trim().length > MAX_COMMENT_LENGTH) {
+    errors.push(`${messageLabel} cannot be more than ${MAX_COMMENT_LENGTH} characters long`);
+  }
+
+  return errors;
+};
+
+const findCommentById = (comments, targetCommentId) => {
+  for (const comment of comments) {
+    if (comment._id.toString() === targetCommentId) {
+      return comment;
+    }
+
+    if (comment.replies?.length) {
+      const nestedMatch = findCommentById(comment.replies, targetCommentId);
+
+      if (nestedMatch) {
+        return nestedMatch;
+      }
+    }
+  }
+
+  return null;
+};
 
 const getBase64ImageSizeInBytes = (image) => {
   if (!image?.startsWith('data:image/')) {
@@ -122,7 +186,7 @@ const createPost = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: 'Post created successfully',
-      post,
+      post: serializePost(post),
     });
   } catch (error) {
     if (error.name === 'ValidationError') {
@@ -143,12 +207,13 @@ const createPost = async (req, res) => {
 
 const getAllPosts = async (req, res) => {
   try {
+    const requestedUserId = getRequestedUserId(req.query.userId);
     const posts = await Post.find().sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
       count: posts.length,
-      posts,
+      posts: posts.map((post) => serializePost(post, requestedUserId)),
     });
   } catch (error) {
     return res.status(500).json({
@@ -162,6 +227,7 @@ const getAllPosts = async (req, res) => {
 const getPostById = async (req, res) => {
   try {
     const { id } = req.params;
+    const requestedUserId = getRequestedUserId(req.query.userId);
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -181,7 +247,7 @@ const getPostById = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      post,
+      post: serializePost(post, requestedUserId),
     });
   } catch (error) {
     return res.status(500).json({
@@ -195,6 +261,7 @@ const getPostById = async (req, res) => {
 const getPostsByUser = async (req, res) => {
   try {
     const { userId } = req.params;
+    const requestedUserId = getRequestedUserId(req.query.userId);
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({
@@ -208,7 +275,7 @@ const getPostsByUser = async (req, res) => {
     return res.status(200).json({
       success: true,
       count: posts.length,
-      posts,
+      posts: posts.map((post) => serializePost(post, requestedUserId)),
     });
   } catch (error) {
     return res.status(500).json({
@@ -219,9 +286,246 @@ const getPostsByUser = async (req, res) => {
   }
 };
 
+const toggleLikePost = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid post id',
+      });
+    }
+
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid user id is required',
+      });
+    }
+
+    const post = await Post.findById(id);
+
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found',
+      });
+    }
+
+    const userIdString = userId.toString();
+    const existingLikeIndex = post.likedBy.findIndex(
+      (likedUserId) => likedUserId.toString() === userIdString
+    );
+
+    let isLiked = false;
+
+    if (existingLikeIndex >= 0) {
+      post.likedBy.splice(existingLikeIndex, 1);
+      post.likesCount = Math.max(0, post.likesCount - 1);
+    } else {
+      post.likedBy.push(userId);
+      post.likesCount += 1;
+      isLiked = true;
+    }
+
+    await post.save();
+
+    return res.status(200).json({
+      success: true,
+      message: isLiked ? 'Post liked successfully' : 'Post unliked successfully',
+      post: serializePost(post, userIdString),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while updating like',
+      error: error.message,
+    });
+  }
+};
+
+const addCommentToPost = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId, username, avatar, message } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid post id',
+      });
+    }
+
+    const validationErrors = validateDiscussionPayload(
+      { userId, username, avatar, message },
+      'Comment message'
+    );
+
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: validationErrors,
+      });
+    }
+
+    const post = await Post.findById(id);
+
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found',
+      });
+    }
+
+    post.comments.push({
+      author: {
+        userId,
+        username: username.trim(),
+        avatar: avatar.trim(),
+      },
+      message: message.trim(),
+    });
+    post.commentsCount += 1;
+
+    await post.save();
+
+    return res.status(201).json({
+      success: true,
+      message: 'Comment added successfully',
+      post: serializePost(post),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while adding comment',
+      error: error.message,
+    });
+  }
+};
+
+const addReplyToComment = async (req, res) => {
+  try {
+    const { id, commentId } = req.params;
+    const { userId, username, avatar, message } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid post id',
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(commentId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid comment id',
+      });
+    }
+
+    const validationErrors = validateDiscussionPayload(
+      { userId, username, avatar, message },
+      'Reply message'
+    );
+
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: validationErrors,
+      });
+    }
+
+    const post = await Post.findById(id);
+
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found',
+      });
+    }
+
+    const comment = findCommentById(post.comments, commentId);
+
+    if (!comment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Comment not found',
+      });
+    }
+
+    comment.replies.push({
+      author: {
+        userId,
+        username: username.trim(),
+        avatar: avatar.trim(),
+      },
+      message: message.trim(),
+    });
+    post.commentsCount += 1;
+
+    await post.save();
+
+    return res.status(201).json({
+      success: true,
+      message: 'Reply added successfully',
+      post: serializePost(post),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while adding reply',
+      error: error.message,
+    });
+  }
+};
+
+const incrementShareCount = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid post id',
+      });
+    }
+
+    const post = await Post.findById(id);
+
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found',
+      });
+    }
+
+    post.sharesCount += 1;
+    await post.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Post shared successfully',
+      post: serializePost(post),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while updating share count',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createPost,
   getAllPosts,
   getPostById,
   getPostsByUser,
+  toggleLikePost,
+  addCommentToPost,
+  addReplyToComment,
+  incrementShareCount,
 };
