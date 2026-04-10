@@ -39,3 +39,27 @@ body {
 *::-webkit-scrollbar-track {
   background: #1b1b1b;
 }
+
+@keyframes adFadeLoop {
+  0%,
+  100% {
+    opacity: 0.68;
+    transform: translateY(0);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
+
+.ad-fade-loop {
+  animation: adFadeLoop 6s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ad-fade-loop {
+    animation: none;
+  }
+}

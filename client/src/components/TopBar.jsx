@@ -19,6 +19,7 @@ const AUTH_STORAGE_KEY = 'mycommunityUser';
 const POSTS_API_URL = `${API_BASE_URL}/posts`;
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_PDF_SIZE_BYTES = 10 * 1024 * 1024;
+const PENDING_POST_STORAGE_KEY = 'mycommunityPendingPost';
 
 function TopBar() {
   const navigate = useNavigate();
@@ -213,11 +214,19 @@ function TopBar() {
         throw new Error(parseResponseMessage(data));
       }
 
+      if (data?.post?._id) {
+        sessionStorage.setItem(PENDING_POST_STORAGE_KEY, JSON.stringify(data.post));
+        window.dispatchEvent(new CustomEvent('post:created', { detail: { post: data.post } }));
+      }
+
       setPostSuccess(data.message || 'Post created successfully');
       setPostTitle('');
       setPostDescription('');
       setPostImage(null);
       setPostPdf(null);
+      if (location.pathname !== '/') {
+        navigate('/');
+      }
       setTimeout(() => {
         handleClosePostModal();
       }, 900);

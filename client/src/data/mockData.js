@@ -1,3 +1,7 @@
+import ad24x7Available from '../assests/ads/24X7 AVAILABLE.webp';
+import graphicDesigningAd from '../assests/ads/graphic designing ad.webp';
+import post1Ad from '../assests/ads/POST-1.webp';
+
 export const navItems = [
   'Domains',
   'Architecture',
@@ -18,24 +22,21 @@ export const ads = [
   {
     id: 1,
     brand: 'focuspoint',
-    image:
-      'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=700&q=80',
+    image: ad24x7Available,
     title: 'Stop Accidental and Malicious Data Breaches',
     cta: 'Learn More',
   },
   {
     id: 2,
     brand: 'mobilepro',
-    image:
-      'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=700&q=80',
+    image: graphicDesigningAd,
     title: 'Set Rules That Stay Ahead',
     cta: 'Get Started',
   },
   {
     id: 3,
     brand: 'housecare',
-    image:
-      'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=700&q=80',
+    image: post1Ad,
     title: 'Better Site Ops with Smarter Teams',
     cta: 'View Demo',
   },

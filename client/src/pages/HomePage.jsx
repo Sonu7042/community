@@ -5,6 +5,7 @@ import { API_BASE_URL } from '../../domain';
 
 const AUTH_STORAGE_KEY = 'mycommunityUser';
 const POSTS_API_URL = `${API_BASE_URL}/posts`;
+const PENDING_POST_STORAGE_KEY = 'mycommunityPendingPost';
 
 const formatTimeAgo = (dateString) => {
   const createdAt = new Date(dateString);
@@ -107,6 +108,43 @@ function HomePage() {
     };
 
     fetchPosts();
+  }, []);
+
+  useEffect(() => {
+    const handlePostCreated = (event) => {
+      const createdPost = event.detail?.post;
+
+      if (!createdPost?._id) {
+        return;
+      }
+
+      const mappedPost = mapApiPostToCardPost(createdPost);
+
+      setPosts((currentPosts) => {
+        const filteredPosts = currentPosts.filter((post) => post.id !== mappedPost.id);
+        return [mappedPost, ...filteredPosts];
+      });
+      setError('');
+    };
+
+    const pendingPost = sessionStorage.getItem(PENDING_POST_STORAGE_KEY);
+
+    if (pendingPost) {
+      try {
+        const parsedPost = JSON.parse(pendingPost);
+        handlePostCreated({ detail: { post: parsedPost } });
+      } catch (storageError) {
+        console.error('Failed to parse pending post', storageError);
+      } finally {
+        sessionStorage.removeItem(PENDING_POST_STORAGE_KEY);
+      }
+    }
+
+    window.addEventListener('post:created', handlePostCreated);
+
+    return () => {
+      window.removeEventListener('post:created', handlePostCreated);
+    };
   }, []);
 
   const handleToggleLike = async (postId) => {

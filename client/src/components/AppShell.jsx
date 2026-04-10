@@ -8,7 +8,7 @@ function AppShell() {
   return (
     <div className="min-h-screen bg-noise">
       <TopBar />
-      <main className="mx-auto grid max-w-[1400px] grid-cols-1 gap-5 px-3 py-5 sm:px-4 lg:grid-cols-[260px_minmax(0,1fr)] lg:px-6 xl:grid-cols-[260px_minmax(0,1fr)_260px]">
+      <main className="mx-auto grid max-w-[1400px] grid-cols-1 gap-5 px-3 py-5 sm:px-4 lg:grid-cols-[260px_minmax(0,1fr)] lg:px-6 xl:grid-cols-[260px_minmax(0,1fr)_260px] xl:gap-8">
         <div className="order-2 xl:order-1">
           <LeftSidebar navItems={navItems} resourceItems={resourceItems} />
         </div>
